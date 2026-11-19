@@ -52,9 +52,44 @@ def main():
         title="History",
         icon="📚"
     )
-    
+    workbench_page = st.Page(
+        "pages/3_GoodThings_Workbench.py",
+        title="商品工作台",
+        icon="🛍️",
+    )
+    product_page = st.Page(
+        "pages/4_GoodThings_Product.py",
+        title="商品创建",
+        icon="📦",
+    )
+    script_page = st.Page(
+        "pages/5_GoodThings_Script.py",
+        title="脚本工作台",
+        icon="📝",
+    )
+    materials_page = st.Page(
+        "pages/6_GoodThings_Materials.py",
+        title="素材工作台",
+        icon="🎞️",
+    )
+    export_page = st.Page(
+        "pages/7_GoodThings_Export.py",
+        title="预览导出",
+        icon="🎬",
+    )
+
     # Set up navigation and run
-    pg = st.navigation([home_page, history_page])
+    pg = st.navigation(
+        [
+            home_page,
+            history_page,
+            workbench_page,
+            product_page,
+            script_page,
+            materials_page,
+            export_page,
+        ]
+    )
     pg.run()
 
 

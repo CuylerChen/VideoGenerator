@@ -57,6 +57,7 @@ RUN export UV_HTTP_TIMEOUT=300 && \
 # Copy rest of application code
 COPY api ./api
 COPY web ./web
+COPY goodthings ./goodthings
 COPY bgm ./bgm
 COPY templates ./templates
 COPY workflows ./workflows
