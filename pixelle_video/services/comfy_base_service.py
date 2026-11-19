@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+from aiohttp import ClientSession, ClientTimeout
 from comfykit import ComfyKit
 from loguru import logger
 
@@ -66,6 +67,23 @@ class ComfyBaseService:
         
         # Reference to core (for accessing shared ComfyKit)
         self.core = core
+
+    async def cleanup_remote_outputs(self) -> None:
+        """Delete generated files on the self-hosted ComfyUI server after they are downloaded."""
+        url = (self.global_config or {}).get("comfyui_url") or ""
+        if not url:
+            return
+        cleanup_url = url.rstrip("/") + "/pixelle/cleanup_outputs"
+        try:
+            timeout = ClientTimeout(total=15)
+            async with ClientSession(timeout=timeout) as session:
+                async with session.post(cleanup_url) as resp:
+                    if resp.status >= 400:
+                        logger.warning(f"ComfyUI output cleanup returned HTTP {resp.status}")
+                    else:
+                        logger.debug(f"ComfyUI outputs cleaned: {await resp.text()}")
+        except Exception as e:
+            logger.warning(f"ComfyUI output cleanup failed: {e}")
     
     def _scan_workflows(self) -> List[Dict[str, Any]]:
         """

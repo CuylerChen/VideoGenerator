@@ -272,7 +272,7 @@ class MediaService(ComfyBaseService):
                 logger.info(f"Executing selfhost workflow: {workflow_input}")
             
             result = await kit.execute(workflow_input, workflow_params)
-            
+
             # 5. Handle result based on specified media_type
             if result.status != "completed":
                 error_msg = result.msg or "Unknown error"
@@ -316,3 +316,6 @@ class MediaService(ComfyBaseService):
         except Exception as e:
             logger.error(f"Media generation error: {e}")
             raise
+        finally:
+            if workflow_info.get("source") != "runninghub":
+                await self.cleanup_remote_outputs()

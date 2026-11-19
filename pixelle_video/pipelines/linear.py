@@ -121,6 +121,18 @@ class LinearVideoPipeline(BasePipeline):
         except Exception as e:
             await self.handle_exception(ctx, e)
             raise
+        finally:
+            await self._cleanup_comfyui_outputs()
+
+    async def _cleanup_comfyui_outputs(self):
+        """Remove generated files on the GPU ComfyUI host after the video is finished."""
+        media = getattr(self.core, "media", None)
+        if media is None or not hasattr(media, "cleanup_remote_outputs"):
+            return
+        try:
+            await media.cleanup_remote_outputs()
+        except Exception as e:
+            logger.warning(f"ComfyUI output cleanup after video failed: {e}")
 
     # ==================== Lifecycle Methods ====================
     
