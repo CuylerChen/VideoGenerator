@@ -320,6 +320,90 @@ async def test_compose_builds_vertical_mp4_from_a_product_image(tmp_path):
     assert probe.stdout.strip() == "1080,1920"
 
 
+def test_fast_storyboard_cuts_every_one_to_two_seconds():
+    from goodthings.fast_cut import build_fast_storyboard
+
+    board = build_fast_storyboard("净浮生油污净", "对准油污喷洒，等待后再擦拭。", [])
+
+    assert board.total_duration == 28
+    assert all(1 <= shot.duration <= 2 for shot in board.shots)
+    assert round(sum(shot.duration for shot in board.shots), 3) == 28
+
+
+def test_before_after_line_requires_real_before_and_after():
+    from goodthings.fast_cut import build_fast_storyboard
+    from goodthings.materials import Material
+
+    missing = build_fast_storyboard("净浮生油污净", "", [])
+    spoken = " ".join(shot.caption for shot in missing.shots) + missing.voice_text
+    assert "清洁前后，一眼就能看出来" not in spoken
+
+    ready = build_fast_storyboard(
+        "净浮生油污净",
+        "",
+        [
+            Material("b", "/raw/before.mp4", "/clips/before.mp4", "video_clip", False, 0, 2, "before"),
+            Material("a", "/raw/after.mp4", "/clips/after.mp4", "video_clip", True, 0, 2, "after"),
+        ],
+    )
+    assert any("清洁前后，一眼就能看出来" in shot.caption for shot in ready.shots)
+    used = [shot.asset_path for shot in ready.shots]
+    assert "/raw/before.mp4" not in used
+    assert "/raw/after.mp4" not in used
+
+
+def test_foam_wording_requires_foam_footage():
+    from goodthings.fast_cut import build_fast_storyboard
+    from goodthings.materials import Material
+
+    plain = build_fast_storyboard("净浮生油污净", "", [])
+    assert "泡沫" not in plain.voice_text
+    assert all("泡沫覆盖" not in shot.caption for shot in plain.shots)
+
+    foamy = build_fast_storyboard(
+        "净浮生油污净",
+        "",
+        [Material("f", "/raw/foam.mp4", "/clips/foam.mp4", "video_clip", False, 0, 2, "foam")],
+    )
+    assert "泡沫" in foamy.voice_text
+
+
+def test_release_video_hands_bytes_to_the_browser_and_deletes_server_files(tmp_path):
+    from goodthings.ephemeral import release_video
+
+    video = tmp_path / "final.mp4"
+    clip = tmp_path / "clip.mp4"
+    video.write_bytes(b"final-bytes")
+    clip.write_bytes(b"clip")
+
+    data = release_video(str(video), extra_paths=[str(clip)])
+
+    assert data == b"final-bytes"
+    assert not video.exists()
+    assert not clip.exists()
+
+
+def test_storyboard_drops_other_peoples_portraits():
+    from goodthings.fast_cut import build_fast_storyboard
+    from goodthings.materials import Material
+    from goodthings.portraits import exclude_portraits
+
+    materials = [
+        Material("face", "/raw/person.mp4", "/clips/person.mp4", "video_clip", False, 0, 2, "wipe"),
+        Material("bottle", "/raw/bottle.jpg", "/raw/bottle.jpg", "image", False, 0, 0, "bottle"),
+    ]
+    kept, dropped = exclude_portraits(
+        materials,
+        contains_face=lambda path: path.endswith("person.mp4"),
+    )
+    board = build_fast_storyboard("净浮生油污净", "", kept)
+
+    assert dropped == 1
+    used = [shot.asset_path for shot in board.shots]
+    assert "/clips/person.mp4" not in used
+    assert "/raw/bottle.jpg" in used
+
+
 def test_compose_refuses_to_splice_the_reference_video():
     from goodthings.compose import assert_segment_asset_allowed
 
